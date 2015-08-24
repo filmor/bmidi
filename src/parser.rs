@@ -29,19 +29,22 @@ impl<'a> MidiReader<'a> {
 
     fn read_byte(&mut self) -> u8 {
         let mut res = [0 as u8];
-        self.reader.read(&mut res).unwrap();
+        let len = self.reader.read(&mut res).unwrap();
+        assert!(len == 1);
         res[0]
     }
 
     fn read_short(&mut self) -> u16 {
         let mut res = [0 as u8; 2];
-        self.reader.read(&mut res).unwrap();
+        let len = self.reader.read(&mut res).unwrap();
+        assert!(len == 2);
         (res[0] as u16) << 8 | (res[1] as u16)
     }
 
     fn read_int(&mut self) -> u32 {
         let mut res = [0 as u8; 4];
-        self.reader.read(&mut res).unwrap();
+        let len = self.reader.read(&mut res).unwrap();
+        assert!(len == 4);
         (((res[0] as u32) << 8
           | (res[1] as u32)) << 8
           | (res[2] as u32)) << 8
@@ -129,7 +132,8 @@ impl<'a> Iterator for MidiReader<'a> {
 
                     if typ == 0x2f {
                         // End-of-track
-                        self.read_byte();
+                        let null_byte = self.read_byte();
+                        assert!(null_byte == 0u8);
                         return None;
                     }
 
@@ -199,13 +203,11 @@ impl File {
         }
 
         let length = reader.read_int() as usize;
+        // TODO: Implement proper "Chunk" classes
 
         println!("Found track of length {}", length);
-        
-        reader.take(length)
-              .map(Result::unwrap)
+
+        reader.map(Result::unwrap)
               .collect()
-              /* .last().map(Result::unwrap)
-              .collect() */
     }
 }
