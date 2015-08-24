@@ -2,3 +2,6 @@
 name = "midi"
 version = "0.1.0"
 authors = ["Benedikt Reinartz <filmor@gmail.com>"]
+
+[dependencies]
+pitch_calc = "*"
