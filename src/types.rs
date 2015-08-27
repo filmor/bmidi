@@ -45,10 +45,3 @@ pub struct Event {
     pub typ: EventType,
 }
 
-pub type Track = Vec<Event>;
-
-pub struct File {
-    pub tracks: Vec<Track>,
-    pub format: u16,
-    pub division: Ticks,
-}

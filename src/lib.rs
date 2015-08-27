@@ -3,5 +3,6 @@ extern crate pitch_calc;
 mod types;
 mod parser;
 mod errors;
+mod reader;
 
-pub use types::*;
+pub use parser::File;
