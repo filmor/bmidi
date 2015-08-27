@@ -1,4 +1,4 @@
-use std::io::BufReader;
+use std::io::{Read, BufReader};
 use std::fs::File as FsFile;
 use std::path::Path;
 
@@ -16,8 +16,8 @@ pub struct File {
 impl File {
     pub fn parse(filename: &Path) -> File {
         let f = FsFile::open(filename).unwrap();
-        let mut reader = BufReader::new(f);
-        // let mut reader = reader.bytes().map(Result::unwrap);
+        let reader = BufReader::new(f);
+        let mut reader = reader.bytes().map(Result::unwrap);
         let mut reader = MidiReader::new(&mut reader);
 
         let header = reader.read_string(4);

@@ -55,7 +55,7 @@ pub trait MidiRead {
     }
 }
 
-/* impl<T: Iterator<Item=u8>> MidiRead for T {
+impl<T> MidiRead for T where T: Iterator<Item=u8> {
     fn read(&mut self, output: &mut [u8]) -> Result<(), MidiError> {
         for field in output.iter_mut() {
             match self.next() {
@@ -73,19 +73,19 @@ pub trait MidiRead {
             None => Err(MidiError::EndOfStream)
         }
     }
-}*/
+}
 
-impl<T: Read> MidiRead for T {
+/* impl MidiRead for Read {
     fn read(&mut self, output: &mut [u8]) -> Result<(), MidiError> {
         match Read::read(self, output).ok() {
             Some(len) if len == output.len() => Ok(()),
             _ => Err(MidiError::EndOfStream)
         }
     }
-}
+}*/
 
 impl<'a> MidiReader<'a> {
-    pub fn new<T: Read>(reader: &'a mut T) -> MidiReader<'a> {
+    pub fn new<T: Iterator<Item=u8>>(reader: &'a mut T) -> MidiReader<'a> {
         MidiReader {
             reader: Box::new(reader) as Box<MidiRead + 'a>,
             running_status: Status { channel: 0, opcode: 0 },
