@@ -12,12 +12,7 @@ struct Status {
     opcode: Byte
 }
 
-pub struct MidiReader<'a> {
-    reader: Box<MidiRead + 'a>,
-    running_status: Status,
-}
-
-pub trait MidiRead {
+trait MidiRead {
     fn read(&mut self, output: &mut [u8]) -> Result<(), MidiError>;
 
     fn read_byte(&mut self) -> Result<u8, MidiError> {
@@ -75,7 +70,7 @@ impl<T> MidiRead for T where T: Iterator<Item=u8> {
     }
 }
 
-/* impl MidiRead for Read {
+/* impl<T: Read + !Iterator<Item=u8>> MidiRead for T {
     fn read(&mut self, output: &mut [u8]) -> Result<(), MidiError> {
         match Read::read(self, output).ok() {
             Some(len) if len == output.len() => Ok(()),
@@ -84,10 +79,15 @@ impl<T> MidiRead for T where T: Iterator<Item=u8> {
     }
 }*/
 
+pub struct MidiReader<'a> {
+    reader: &'a mut MidiRead,
+    running_status: Status,
+}
+
 impl<'a> MidiReader<'a> {
     pub fn new<T: Iterator<Item=u8>>(reader: &'a mut T) -> MidiReader<'a> {
         MidiReader {
-            reader: Box::new(reader) as Box<MidiRead + 'a>,
+            reader: reader,
             running_status: Status { channel: 0, opcode: 0 },
         }
     }
