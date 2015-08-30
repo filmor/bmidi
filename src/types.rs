@@ -6,6 +6,7 @@ use std::fmt;
 pub type Ticks = u32;
 pub type Byte = u8;
 
+#[derive(Clone)]
 pub struct Note(u8);
 
 impl Note {
@@ -20,14 +21,14 @@ impl fmt::Debug for Note {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum KeyEventType {
     Press,
     Release,
     Aftertouch
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum EventType {
     Key { typ: KeyEventType, note: Note, velocity: Byte },
     ControlChange { controller: Byte, value: Byte },
@@ -38,7 +39,7 @@ pub enum EventType {
     // SysEx
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct Event {
     pub delay: Ticks,
     pub channel: Byte,
