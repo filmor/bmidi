@@ -5,3 +5,6 @@ authors = ["Benedikt Reinartz <filmor@gmail.com>"]
 
 [dependencies]
 pitch_calc = "*"
+time_calc = "*"
+dsp-chain = "*"
+synth = "*"
