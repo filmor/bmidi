@@ -1,9 +1,9 @@
+use note::Note;
+
 pub type Ticks = u32;
 pub type Byte = u8;
 
-pub use note::*;
-
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,Copy)]
 pub enum KeyEventType {
     Press,
     Release,

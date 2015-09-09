@@ -1,9 +1,10 @@
 extern crate pitch_calc;
 
-use pitch_calc::Step;
+use pitch_calc::{Hz, Step};
 use std::fmt;
+use std::convert::{From};
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct Note(u8);
 
 impl Note {
@@ -11,13 +12,25 @@ impl Note {
         Note(value)
     }
 
-    pub fn freq(&self) -> f32 {
-        Step(self.0 as f32).to_hz().0
+    pub fn to_step(&self) -> Step {
+        Step(self.0 as f32)
+    }
+}
+
+impl From<Note> for Hz {
+    fn from(note: Note) -> Hz {
+        note.to_step().to_hz()
+    }
+}
+
+impl From<Note> for Step {
+    fn from(note: Note) -> Step {
+        note.to_step()
     }
 }
 
 impl fmt::Debug for Note {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", Step(self.0 as f32).letter_octave())
+        write!(f, "{:?}", self.to_step().letter_octave())
     }
 }

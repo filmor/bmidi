@@ -8,3 +8,4 @@ mod note;
 
 pub use parser::File;
 pub use types::*;
+pub use note::*;

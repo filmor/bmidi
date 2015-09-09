@@ -90,14 +90,14 @@ fn main() {
 
                 if evt.channel == 0 {
                     match evt.typ {
-                        EventType::Key{ ref typ, ref note, ref velocity } => {
-                            println!("Key {:?} {:?} {} {}", typ, note, note.freq(), velocity);
+                        EventType::Key{ typ, note, velocity } => {
+                            println!("Key {:?} {:?} {}", typ, note, velocity);
                             match typ {
-                                &KeyEventType::Press => {
-                                    synth.note_on(note.freq() / 10f32, *velocity as f32 / 256f32);
+                                KeyEventType::Press => {
+                                    synth.note_on(note, velocity as f32 / 256f32);
                                 },
-                                &KeyEventType::Release => {
-                                    synth.note_off(note.freq());
+                                KeyEventType::Release => {
+                                    synth.note_off(note);
                                 }
                                 _ => {}
                             }

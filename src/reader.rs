@@ -1,5 +1,7 @@
 use std::io::Read;
 
+use note::Note;
+
 use types::*;
 use types::KeyEventType::*;
 use types::EventType::*;
