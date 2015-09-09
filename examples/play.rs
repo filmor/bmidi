@@ -41,7 +41,7 @@ fn main() {
 
         // Now we can create our oscillator from our envelopes.
         // There are also Sine, Noise, NoiseWalk, SawExp and Square waveforms.
-        let oscillator = Oscillator::new(oscillator::waveform::Sine, amp_env, 440.0, ());
+        let oscillator = Oscillator::new(oscillator::waveform::Sine, amp_env, 55., ());
 
         // Here we construct our Synth from our oscillator.
         Synth::new(mode::Poly, ())
@@ -79,7 +79,7 @@ fn main() {
         let time_slice = (dt * 1000.) as i64;
         timer -= time_slice;
 
-            // Advance iterator
+        // Advance iterator
         while timer <= 0 {
             index += 1;
             if index >= track.len() {
