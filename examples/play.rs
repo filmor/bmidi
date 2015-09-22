@@ -13,7 +13,7 @@ extern crate time_calc as time;
 extern crate dsp;
 extern crate midi;
 
-use dsp::{CallbackFlags, CallbackResult, Node, Sample, SoundStream, Settings, StreamParams};
+use dsp::{Node, SoundStream, StreamParams};
 use synth::Synth;
 use midi::*;
 
@@ -28,8 +28,6 @@ fn main() {
     let mut synth = {
         use synth::{Point, Oscillator, mode, oscillator};
 
-        // The following envelopes should create a downward pitching sine wave that gradually quietens.
-        // Try messing around with the points and adding some of your own!
         let amp_env = oscillator::AmpEnvelope::from_points(vec!(
             //         Time ,  Amp ,  Curve
             Point::new(0.0  ,  0.0 ,  0.0),
@@ -46,21 +44,10 @@ fn main() {
         // Here we construct our Synth from our oscillator.
         Synth::new(mode::Poly, ())
             .oscillator(oscillator) // Add as many different oscillators as desired.
-            // .loop_points(0.49, 0.51) // Loop start and end points.
-            .fade(100.0, 1000.0) // Attack and Release in milliseconds.
+            .fade(50.0, 300.0) // Attack and Release in milliseconds.
             .num_voices(16) // By default Synth is monophonic but this gives it `n` voice polyphony.
             .volume(0.20)
-//            .detune(0.5)
-            .spread(1.0)
-
-        // Other methods include:
-            // .loop_start(0.0)
-            // .loop_end(1.0)
-            // .attack(ms)
-            // .release(ms)
-            // .note_freq_generator(nfg)
-            // .oscillators([oscA, oscB, oscC])
-            // .volume(1.0)
+            .spread(0.1)
     };
 
     // We'll use this to keep track of time and break from the loop after 6 seconds.
@@ -69,19 +56,27 @@ fn main() {
     let res = File::parse("test.mid".as_ref());
 
     let mut track = res.track_iter(1);
-    let mut index = 0usize;
 
-    // The callback we'll use to pass to the Stream.
-    let callback = Box::new(move |output: &mut[f32], settings: Settings, dt: f64, _: CallbackFlags| {
-        Sample::zero_buffer(output);
+    let mut stream = SoundStream::new()
+        .frames_per_buffer(256)
+        .output::<f32>(StreamParams::new())
+        .run()
+        .unwrap();
+
+    for event in stream.by_ref() {
+        let dsp::output::Event(output, settings) = event;
+
+        // TODO: Split up the buffer according to the next few events and
+        //       request audio in multiple steps, filling up the whole buffer
         synth.audio_requested(output, settings);
+
+        let dt = settings.frames as f32 / settings.sample_hz as f32;
 
         let time_slice = (dt * 1000.) as i64;
         timer -= time_slice;
 
         // Advance iterator
         while timer <= 0 {
-            index += 1;
             let evt = track.next().unwrap();
 
             if evt.channel == 0 {
@@ -104,15 +99,5 @@ fn main() {
 
             timer += (evt.delay as f64 * 0.6) as i64;
         }
-
-        CallbackResult::Continue
-    });
-
-    // Construct the default, non-blocking output stream and run our callback.
-    let stream = SoundStream::new().output(StreamParams::new()).run_callback(callback).unwrap();
-
-    // Loop while the stream is active.
-    while let Ok(true) = stream.is_active() {
-        std::thread::sleep_ms(10);
     }
 }
