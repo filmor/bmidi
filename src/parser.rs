@@ -5,7 +5,7 @@ use std::path::Path;
 use types::{Event, Ticks};
 use reader::MidiReader;
 
-pub type Track = Vec<Event>;
+pub type Track = Vec<u8>;
 
 pub struct File {
     pub tracks: Vec<Track>,
@@ -14,6 +14,14 @@ pub struct File {
 }
 
 impl File {
+    // TODO: Use explicit lifetime 
+    pub fn track_iter<'a>(&'a self, index: usize) -> Box<Iterator<Item=Event> + 'a> {
+        let ref track = self.tracks[index];
+        let iter = track.into_iter().map(|x| *x);
+        let my_reader = MidiReader::new(iter);
+        Box::new(my_reader)
+    }
+
     pub fn parse(filename: &Path) -> File {
         let f = FsFile::open(filename).unwrap();
         let reader = BufReader::new(f);
@@ -42,7 +50,17 @@ impl File {
         println!("Found {} tracks, division {}", track_count, division);
 
         for _ in 0..track_count {
-            tracks.push(File::parse_track(&mut reader))
+            let header = reader.read_string(4);
+
+            if header != "MTrk" {
+                panic!("Invalid track header")
+            }
+
+            let length = reader.read_int() as usize;
+
+            println!("Found track of length {}", length);
+
+            tracks.push(reader.read_bytes(length))
         }
 
         for t in &tracks {
@@ -50,21 +68,5 @@ impl File {
         }
 
         File { format: format, division: division, tracks: tracks }
-    }
-
-    fn parse_track(reader: &mut MidiReader) -> Track {
-        let header = reader.read_string(4);
-
-        if header != "MTrk" {
-            panic!("Invalid track header")
-        }
-
-        let length = reader.read_int() as usize;
-        // TODO: Implement proper "Chunk" classes
-
-        println!("Found track of length {}", length);
-
-        reader.map(Result::unwrap)
-              .collect()
     }
 }

@@ -68,7 +68,7 @@ fn main() {
 
     let res = File::parse("test.mid".as_ref());
 
-    let track = res.tracks[1].clone();
+    let mut track = res.track_iter(1);
     let mut index = 0usize;
 
     // The callback we'll use to pass to the Stream.
@@ -82,32 +82,27 @@ fn main() {
         // Advance iterator
         while timer <= 0 {
             index += 1;
-            if index >= track.len() {
-                return CallbackResult::Complete
-            }
-            else {
-                let evt = &track[index];
+            let evt = track.next().unwrap();
 
-                if evt.channel == 0 {
-                    match evt.typ {
-                        EventType::Key{ typ, note, velocity } => {
-                            println!("Key {:?} {:?} {}", typ, note, velocity);
-                            match typ {
-                                KeyEventType::Press => {
-                                    synth.note_on(note, velocity as f32 / 256f32);
-                                },
-                                KeyEventType::Release => {
-                                    synth.note_off(note);
-                                }
-                                _ => {}
+            if evt.channel == 0 {
+                match evt.typ {
+                    EventType::Key{ typ, note, velocity } => {
+                        println!("Key {:?} {:?} {}", typ, note, velocity);
+                        match typ {
+                            KeyEventType::Press => {
+                                synth.note_on(note, velocity as f32 / 256f32);
+                            },
+                            KeyEventType::Release => {
+                                synth.note_off(note);
                             }
+                            _ => {}
                         }
-                        _ => { println!("Ignored event {:?}", evt) }
                     }
+                    _ => { println!("Ignored event {:?}", evt) }
                 }
-
-                timer += (evt.delay as f64 * 0.6) as i64;
             }
+
+            timer += (evt.delay as f64 * 0.6) as i64;
         }
 
         CallbackResult::Continue
@@ -120,5 +115,4 @@ fn main() {
     while let Ok(true) = stream.is_active() {
         std::thread::sleep_ms(10);
     }
-
 }

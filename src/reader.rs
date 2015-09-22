@@ -14,7 +14,7 @@ struct Status {
     opcode: Byte
 }
 
-trait MidiRead {
+pub trait MidiRead {
     fn read(&mut self, output: &mut [u8]) -> Result<(), MidiError>;
 
     fn read_byte(&mut self) -> Result<u8, MidiError> {
@@ -81,13 +81,13 @@ impl<T> MidiRead for T where T: Iterator<Item=u8> {
     }
 }*/
 
-pub struct MidiReader<'a> {
-    reader: &'a mut MidiRead,
+pub struct MidiReader<I: MidiRead> {
+    reader: I,
     running_status: Status,
 }
 
-impl<'a> MidiReader<'a> {
-    pub fn new<T: Iterator<Item=u8>>(reader: &'a mut T) -> MidiReader<'a> {
+impl<I: MidiRead> MidiReader<I> {
+    pub fn new(reader: I) -> MidiReader<I> {
         MidiReader {
             reader: reader,
             running_status: Status { channel: 0, opcode: 0 },
@@ -106,7 +106,7 @@ impl<'a> MidiReader<'a> {
         self.reader.read_short().unwrap()
     }
 
-    fn read_bytes(&mut self, length: usize) -> Vec<u8> {
+    pub fn read_bytes(&mut self, length: usize) -> Vec<u8> {
         let mut res = vec![0u8; length];
         self.reader.read(&mut res).unwrap();
         res
@@ -117,10 +117,12 @@ impl<'a> MidiReader<'a> {
     }
 }
 
-impl<'a> Iterator for MidiReader<'a> {
-    type Item = Result<Event, MidiError>;
+impl<I: MidiRead> Iterator for MidiReader<I> {
+    // type Item = Result<Event, MidiError>;
+    type Item = Event;
 
-    fn next(&mut self) -> Option<Result<Event, MidiError>> {
+    fn next(&mut self) -> Option<Event> /* Option<Result<Event, MidiError>>*/ {
+        // TODO: Break cleanly if self.reader is exhausted
         let ticks = self.reader.read_var_len().unwrap();
 
         let mut first_byte = self.read_byte();
@@ -195,6 +197,6 @@ impl<'a> Iterator for MidiReader<'a> {
             delay: ticks, channel: status.channel, typ: event_type
         };
 
-        Some(Ok(event))
+        Some(event)
     }
 }
