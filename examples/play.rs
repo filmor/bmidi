@@ -7,7 +7,6 @@
 //!
 
 // extern crate dsp;
-extern crate pitch_calc as pitch;
 extern crate synth;
 extern crate time_calc as time;
 extern crate dsp;
@@ -26,9 +25,9 @@ fn main() {
 
     // Construct our fancy Synth!
     let mut synth = {
-        use synth::{Point, Oscillator, mode, oscillator};
+        use synth::{Point, Oscillator, mode, oscillator, Envelope};
 
-        let amp_env = oscillator::AmpEnvelope::from_points(vec!(
+        let amp_env = Envelope::from(vec!(
             //         Time ,  Amp ,  Curve
             Point::new(0.0  ,  0.0 ,  0.0),
             Point::new(0.01 ,  1.0 ,  0.0),

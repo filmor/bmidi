@@ -4,7 +4,12 @@ version = "0.1.0"
 authors = ["Benedikt Reinartz <filmor@gmail.com>"]
 
 [dependencies]
-pitch_calc = "*"
-time_calc = "*"
-dsp-chain = "*"
-synth = "*"
+pitch_calc = "0.9.7"
+
+[[example]]
+name = "play"
+
+[dev_dependencies]
+synth = "0.6.2"
+time_calc = "0.10.0"
+dsp-chain = "0.5.2"
