@@ -1,9 +1,7 @@
 //!
-//!  test.rs.rs
+//!  play.rs
 //!
-//!  Created by Mitchell Nordine at 05:57PM on December 19, 2014.
-//!
-//!  Always remember to run high performance Rust code with the --release flag. `Synth` 
+//!  Based on synth/examples/test.rs by Mitchell Nordine
 //!
 
 // extern crate dsp;
@@ -76,27 +74,30 @@ fn main() {
 
         // Advance iterator
         while timer <= 0 {
-            let evt = track.next().unwrap();
-
-            if evt.channel == 0 {
-                match evt.typ {
-                    EventType::Key{ typ, note, velocity } => {
-                        println!("Key {:?} {:?} {}", typ, note, velocity);
-                        match typ {
-                            KeyEventType::Press => {
-                                synth.note_on(note, velocity as f32 / 256f32);
-                            },
-                            KeyEventType::Release => {
-                                synth.note_off(note);
+            match track.next() {
+                Some(evt) => {
+                    if evt.channel == 0 {
+                        match evt.typ {
+                            EventType::Key{ typ, note, velocity } => {
+                                println!("Key {:?} {:?} {}", typ, note, velocity);
+                                match typ {
+                                    KeyEventType::Press => {
+                                        synth.note_on(note, velocity as f32 / 256f32);
+                                    },
+                                    KeyEventType::Release => {
+                                        synth.note_off(note);
+                                    }
+                                    _ => {}
+                                }
                             }
-                            _ => {}
+                            _ => { println!("Ignored event {:?}", evt) }
                         }
                     }
-                    _ => { println!("Ignored event {:?}", evt) }
-                }
-            }
 
-            timer += (evt.delay as f64 * 0.6) as i64;
+                    timer += (evt.delay as f64 * 0.6) as i64;
+                },
+                None => { println!("Done") }
+            }
         }
     }
 }
