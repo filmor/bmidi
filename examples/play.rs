@@ -74,32 +74,30 @@ fn main() {
 
         // Advance iterator
         while timer <= 0 {
-            match track.next() {
-                Some(evt) => {
-                    if evt.channel == 0 {
-                        match evt.typ {
-                            EventType::Key{ typ, note, velocity } => {
-                                println!("Key {:?} {:?} {}", typ, note, velocity);
-                                match typ {
-                                    KeyEventType::Press => {
-                                        synth.note_on(note, velocity as f32 / 256f32);
-                                    },
-                                    KeyEventType::Release => {
-                                        synth.note_off(note);
-                                    }
-                                    _ => {}
-                                }
+            if let Some(evt) = track.next() {
+                if evt.channel == 0 {
+                    if let EventType::Key{ typ, note, velocity } = evt.typ {
+                        println!("Key {:?} {:?} {}", typ, note, velocity);
+                        match typ {
+                            KeyEventType::Press => {
+                                synth.note_on(note, velocity as f32 / 256f32);
+                            },
+                            KeyEventType::Release => {
+                                synth.note_off(note);
                             }
-                            _ => { println!("Ignored event {:?}", evt) }
+                            _ => {}
                         }
                     }
-
-                    timer += (evt.delay as f64 * 0.6) as i64;
-                },
-                None => {
-                    println!("Done");
-                    break;
+                    else {
+                        println!("Ignored event {:?}", evt);
+                    }
                 }
+
+                timer += (evt.delay as f64 * 0.6) as i64;
+            }
+            else {
+                println!("Done");
+                break;
             }
         }
     }

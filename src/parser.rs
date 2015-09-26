@@ -15,7 +15,6 @@ pub struct File {
 }
 
 impl File {
-    // TODO: Use explicit lifetime 
     pub fn track_iter<'a>(&'a self, index: usize) -> Box<Iterator<Item=Event> + 'a> {
         let ref track = self.tracks[index];
         let iter = track.into_iter().map(|x| *x);
