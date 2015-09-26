@@ -96,7 +96,10 @@ fn main() {
 
                     timer += (evt.delay as f64 * 0.6) as i64;
                 },
-                None => { println!("Done") }
+                None => {
+                    println!("Done");
+                    break;
+                }
             }
         }
     }
