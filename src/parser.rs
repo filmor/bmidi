@@ -4,6 +4,7 @@ use std::path::Path;
 
 use types::{Event, Ticks};
 use reader::MidiReader;
+use combined_iterator::CombinedIterator;
 
 pub type Track = Vec<u8>;
 
@@ -20,6 +21,12 @@ impl File {
         let iter = track.into_iter().map(|x| *x);
         let my_reader = MidiReader::new(iter);
         Box::new(my_reader)
+    }
+
+    pub fn iter<'a>(&'a self) -> CombinedIterator<'a> {
+        CombinedIterator::<'a>::new(
+            (0..self.tracks.len()).map(|n| self.track_iter(n)).collect()
+            )
     }
 
     pub fn parse(filename: &Path) -> File {
