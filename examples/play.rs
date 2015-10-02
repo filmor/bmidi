@@ -6,13 +6,15 @@
 
 // extern crate dsp;
 extern crate synth;
-extern crate time_calc as time;
+extern crate time_calc;
 extern crate dsp;
 extern crate midi;
 
-use dsp::{Node, SoundStream, StreamParams};
+use dsp::{Node, SoundStream, StreamParams, Settings};
+use time_calc::{Bpm, Ppqn, Ticks};
 use synth::Synth;
-use midi::*;
+use midi::{File, EventType, KeyEventType};
+use std::cmp;
 
 // Currently supports i8, i32, f32.
 pub type AudioSample = f32;
@@ -20,6 +22,8 @@ pub type Input = AudioSample;
 pub type Output = AudioSample;
 
 fn main() {
+    let channel = 0;
+    let track = 1;
 
     // Construct our fancy Synth!
     let mut synth = {
@@ -48,11 +52,8 @@ fn main() {
     };
 
     // We'll use this to keep track of time and break from the loop after 6 seconds.
-    let mut timer: i64 = 0;
-
     let res = File::parse("test.mid".as_ref());
-
-    let mut track = res.track_iter(1);
+    let mut track = res.track_iter(track).peekable();
 
     let mut stream = SoundStream::new()
         .frames_per_buffer(256)
@@ -60,24 +61,32 @@ fn main() {
         .run()
         .unwrap();
 
-    for event in stream.by_ref() {
+    let ppqn = res.division as Ppqn;
+    let mut bpm = 120 as Bpm;
+
+    let midi_tempo_to_bpm = |tempo| {
+        // tempo is µs / beat (mus = 10^-6, min = 6 * 10^1 => min / mus = 6 * 10^7)
+        // => bpm = (6 * 10^7) / tempo
+        (6e7 / tempo) as Bpm
+    };
+
+    bpm = midi_tempo_to_bpm(6e5);
+
+    // How many frames do we still have to write with the current state?
+    let mut cursor = 0 as i64;
+
+    'outer: for event in stream.by_ref() {
         let dsp::output::Event(output, settings) = event;
 
-        // TODO: Split up the buffer according to the next few events and
-        //       request audio in multiple steps, filling up the whole buffer
-        synth.audio_requested(output, settings);
+        let mut inner_cursor = 0;
 
-        let dt = settings.frames as f32 / settings.sample_hz as f32;
+        while inner_cursor < settings.frames {
+            if cursor <= 0 {
+                let evt = track.next().unwrap();
 
-        let time_slice = (dt * 1000.) as i64;
-        timer -= time_slice;
-
-        // Advance iterator
-        while timer <= 0 {
-            if let Some(evt) = track.next() {
-                if evt.channel == 0 {
+                if evt.channel == channel {
                     if let EventType::Key{ typ, note, velocity } = evt.typ {
-                        println!("Key {:?} {:?} {}", typ, note, velocity);
+                        // println!("Key {:?} {:?} {}", typ, note, velocity);
                         match typ {
                             KeyEventType::Press => {
                                 synth.note_on(note, velocity as f32 / 256f32);
@@ -92,13 +101,48 @@ fn main() {
                         println!("Ignored event {:?}", evt);
                     }
                 }
+                else {
+                    println!("Ignored event {:?}", evt);
+                }
 
-                timer += (evt.delay as f64 * 0.6) as i64;
+                if let Some(next_evt) = track.peek() {
+                    // TODO Modify bpm using SetTempo events, for that we need
+                    //      to iterate over all tracks at once (FF 51 03 + 24bit,
+                    //      microseconds per quarter node)
+                    let skip = Ticks(next_evt.delay as i64)
+                        .samples(bpm, ppqn, settings.sample_hz as f64)
+                        as u16;
+
+                    let time = Ticks(next_evt.delay as i64).ms(bpm, ppqn);
+                    println!("Event Length: {} ms, {} samples", time, skip);
+
+                    cursor += skip as i64;
+                }
+                else {
+                    break 'outer;
+                }
             }
-            else {
-                println!("Done");
-                break;
-            }
+
+            let new_inner_cursor = cmp::min(
+                inner_cursor as i64 + cursor,
+                settings.frames as i64) as u16;
+
+            let (begin, end) = (inner_cursor, new_inner_cursor);
+
+            let new_settings = Settings {
+                sample_hz: settings.sample_hz,
+                channels: settings.channels,
+                frames: end - begin
+            };
+
+            let new_output = &mut output[
+                (begin * settings.channels) as usize
+                ..(end * settings.channels) as usize ];
+
+            synth.audio_requested(new_output, new_settings);
+
+            cursor -= (new_inner_cursor - inner_cursor) as i64;
+            inner_cursor = new_inner_cursor;
         }
     }
 }
