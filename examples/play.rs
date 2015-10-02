@@ -10,11 +10,15 @@ extern crate time_calc;
 extern crate dsp;
 extern crate midi;
 
+#[macro_use]
+extern crate clap;
+
 use dsp::{Node, SoundStream, StreamParams, Settings};
 use time_calc::{Bpm, Ppqn, Ticks};
 use synth::Synth;
 use midi::{File, EventType, KeyEventType};
 use std::cmp;
+use clap::App;
 
 // Currently supports i8, i32, f32.
 pub type AudioSample = f32;
@@ -22,8 +26,18 @@ pub type Input = AudioSample;
 pub type Output = AudioSample;
 
 fn main() {
-    let channel = 0;
-    let track = 1;
+    let matches = App::new("midi-rs-play")
+        .version(env!("CARGO_PKG_VERSION"))
+        .about("Simple midi player")
+        .args_from_usage(
+            "-t --track=[TRACK] 'The track to play'
+             -c --channel=[CHANNEL] 'The channel in the track you want to hear'
+             [FILENAME] 'A standard midi file'")
+        .get_matches();
+
+    let channel = value_t!(matches.value_of("CHANNEL"), u8).unwrap_or(0);
+    let track = value_t!(matches.value_of("TRACK"), usize).unwrap_or(1);
+    let filename = matches.value_of("FILENAME").unwrap();
 
     // Construct our fancy Synth!
     let mut synth = {
@@ -52,7 +66,7 @@ fn main() {
     };
 
     // We'll use this to keep track of time and break from the loop after 6 seconds.
-    let res = File::parse("test.mid".as_ref());
+    let res = File::parse(filename.as_ref());
     let mut track = res.track_iter(track).peekable();
 
     let mut stream = SoundStream::new()
@@ -86,7 +100,7 @@ fn main() {
 
                 if evt.channel == channel {
                     if let EventType::Key{ typ, note, velocity } = evt.typ {
-                        // println!("Key {:?} {:?} {}", typ, note, velocity);
+                        println!("Key {:?} {:?} {}", typ, note, velocity);
                         match typ {
                             KeyEventType::Press => {
                                 synth.note_on(note, velocity as f32 / 256f32);
@@ -112,9 +126,6 @@ fn main() {
                     let skip = Ticks(next_evt.delay as i64)
                         .samples(bpm, ppqn, settings.sample_hz as f64)
                         as u16;
-
-                    let time = Ticks(next_evt.delay as i64).ms(bpm, ppqn);
-                    println!("Event Length: {} ms, {} samples", time, skip);
 
                     cursor += skip as i64;
                 }
