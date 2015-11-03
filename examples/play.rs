@@ -8,7 +8,7 @@
 extern crate synth;
 extern crate time_calc;
 extern crate dsp;
-extern crate midi;
+extern crate bmidi;
 
 #[macro_use]
 extern crate clap;
@@ -16,7 +16,7 @@ extern crate clap;
 use dsp::{Node, SoundStream, StreamParams, Settings};
 use time_calc::{Bpm, Ppqn, Ticks};
 use synth::Synth;
-use midi::{File, EventType, KeyEventType};
+use bmidi::{File, EventType, KeyEventType};
 use std::cmp;
 use clap::App;
 
@@ -26,7 +26,7 @@ pub type Input = AudioSample;
 pub type Output = AudioSample;
 
 fn main() {
-    let matches = App::new("midi-rs-play")
+    let matches = App::new("bmidi-play")
         .version(env!("CARGO_PKG_VERSION"))
         .about("Simple midi player")
         .args_from_usage(

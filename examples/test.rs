@@ -1,6 +1,6 @@
-extern crate midi;
+extern crate bmidi;
 
-use midi::*;
+use bmidi::*;
 
 fn main() {
     let res = File::parse("test.mid".as_ref());

@@ -1,3 +1,3 @@
-# midi-rs [![Build Status](https://travis-ci.org/filmor/midi-rs.svg?branch=master)](https://travis-ci.org/filmor/midi-rs)
+# bmidi [![Build Status](https://travis-ci.org/filmor/bmidi.svg?branch=master)](https://travis-ci.org/filmor/bmidi)
 
-A Standard Midi File parser for rust.
+Benedikt's Standard Midi File parser for rust.
