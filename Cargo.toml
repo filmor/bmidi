@@ -3,6 +3,14 @@ name = "bmidi"
 version = "0.0.1"
 authors = ["Benedikt Reinartz <filmor@gmail.com>"]
 
+license = "LGPL-3.0"
+
+description = "Midi parsing and processing library"
+repository = "https://github.com/filmor/bmidi"
+
+readme = "README.md"
+
+
 [dependencies]
 pitch_calc = "0.9.7"
 
