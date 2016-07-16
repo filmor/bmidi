@@ -1,5 +1,3 @@
-use std::io::Read;
-
 use note::Note;
 
 use types::*;
@@ -72,14 +70,19 @@ impl<T> MidiRead for T where T: Iterator<Item=u8> {
     }
 }
 
-/* impl<T: Read + !Iterator<Item=u8>> MidiRead for T {
+/* Disabled until inverse trait bounds are supported
+ * Needs: use std::io::Read;
+
+impl<T: Read + !Iterator<Item=u8>> MidiRead for T {
     fn read(&mut self, output: &mut [u8]) -> Result<(), MidiError> {
         match Read::read(self, output).ok() {
             Some(len) if len == output.len() => Ok(()),
             _ => Err(MidiError::EndOfStream)
         }
     }
-}*/
+}
+
+*/
 
 pub struct MidiReader<I: MidiRead> {
     reader: I,
