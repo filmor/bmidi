@@ -1,10 +1,10 @@
-use std::io::{Read, BufReader};
 use std::fs::File as FsFile;
+use std::io::{BufReader, Read};
 use std::path::Path;
 
-use types::{Event, Ticks};
-use reader::MidiReader;
 use combined_iterator::CombinedIterator;
+use reader::MidiReader;
+use types::{Event, Ticks};
 
 pub type Track = Vec<u8>;
 
@@ -15,17 +15,15 @@ pub struct File {
 }
 
 impl File {
-    pub fn track_iter<'a>(&'a self, index: usize) -> Box<Iterator<Item=Event> + 'a> {
-        let ref track = self.tracks[index];
-        let iter = track.into_iter().map(|x| *x);
+    pub fn track_iter<'a>(&'a self, index: usize) -> Box<Iterator<Item = Event> + 'a> {
+        let track = &self.tracks[index];
+        let iter = track.into_iter().cloned();
         let my_reader = MidiReader::new(iter);
         Box::new(my_reader)
     }
 
     pub fn iter<'a>(&'a self) -> CombinedIterator<'a> {
-        CombinedIterator::<'a>::new(
-            (0..self.tracks.len()).map(|n| self.track_iter(n)).collect()
-            )
+        CombinedIterator::<'a>::new((0..self.tracks.len()).map(|n| self.track_iter(n)).collect())
     }
 
     pub fn parse(filename: &Path) -> File {
@@ -51,7 +49,7 @@ impl File {
 
         let track_count = reader.read_short();
         let mut tracks = Vec::<Track>::with_capacity(track_count as usize);
-        let division = reader.read_short() as u32;
+        let division = reader.read_short().into();
 
         println!("Found {} tracks, division {}", track_count, division);
 
@@ -73,6 +71,10 @@ impl File {
             println!("Parsed track of length {}", t.len());
         }
 
-        File { format: format, division: division, tracks: tracks }
+        File {
+            format,
+            division,
+            tracks,
+        }
     }
 }

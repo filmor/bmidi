@@ -1,22 +1,24 @@
+#![cfg_attr(feature = "cargo-clippy", allow(cast_lossless))]
+
 use note::Note;
 
-use types::*;
-use types::KeyEventType::*;
 use types::EventType::*;
+use types::KeyEventType::*;
+use types::*;
 
 use errors::*;
 
 #[derive(Clone, Copy)]
 struct Status {
     channel: Byte,
-    opcode: Byte
+    opcode: Byte,
 }
 
 pub trait MidiRead {
     fn read(&mut self, output: &mut [u8]) -> Result<(), MidiError>;
 
     fn read_byte(&mut self) -> Result<u8, MidiError> {
-        let mut res = [0 as u8];
+        let mut res = [0u8];
         try!(self.read(&mut res));
         Ok(res[0])
     }
@@ -24,38 +26,43 @@ pub trait MidiRead {
     fn read_short(&mut self) -> Result<u16, MidiError> {
         let mut res = [0 as u8; 2];
         try!(self.read(&mut res));
-        Ok((res[0] as u16) << 8 | (res[1] as u16))
+        Ok(u16::from(res[0]) << 8 | u16::from(res[1]))
     }
 
     fn read_int(&mut self) -> Result<u32, MidiError> {
         let mut res = [0 as u8; 4];
         try!(self.read(&mut res));
-        Ok((((res[0] as u32) << 8
-          | (res[1] as u32)) << 8
-          | (res[2] as u32)) << 8
-          | (res[3] as u32))
+        Ok(
+            (((res[0] as u32) << 8 | (res[1] as u32)) << 8 | (res[2] as u32)) << 8
+                | (res[3] as u32),
+        )
     }
 
     fn read_var_len(&mut self) -> Result<u32, MidiError> {
         let mut res = 0 as u32;
 
         loop {
-            let next_byte = try!(self.read_byte()) as u32;
+            let next_byte = u32::from(try!(self.read_byte()));
             res <<= 7;
             res |= next_byte & 0x7f;
-            if next_byte & 0x80 == 0 { break }
+            if next_byte & 0x80 == 0 {
+                break;
+            }
         }
 
         Ok(res)
     }
 }
 
-impl<T> MidiRead for T where T: Iterator<Item=u8> {
+impl<T> MidiRead for T
+where
+    T: Iterator<Item = u8>,
+{
     fn read(&mut self, output: &mut [u8]) -> Result<(), MidiError> {
         for field in output.iter_mut() {
             match self.next() {
                 Some(value) => *field = value,
-                None => return Err(MidiError::EndOfStream)
+                None => return Err(MidiError::EndOfStream),
             }
         }
 
@@ -65,7 +72,7 @@ impl<T> MidiRead for T where T: Iterator<Item=u8> {
     fn read_byte(&mut self) -> Result<u8, MidiError> {
         match self.next() {
             Some(value) => Ok(value),
-            None => Err(MidiError::EndOfStream)
+            None => Err(MidiError::EndOfStream),
         }
     }
 }
@@ -92,8 +99,11 @@ pub struct MidiReader<I: MidiRead> {
 impl<I: MidiRead> MidiReader<I> {
     pub fn new(reader: I) -> MidiReader<I> {
         MidiReader {
-            reader: reader,
-            running_status: Status { channel: 0, opcode: 0 },
+            reader,
+            running_status: Status {
+                channel: 0,
+                opcode: 0,
+            },
         }
     }
 
@@ -135,10 +145,8 @@ impl<I: MidiRead> Iterator for MidiReader<I> {
             first_byte = self.read_byte();
             self.running_status = Status {
                 channel: status_byte & 0xf,
-                opcode: (status_byte & 0xf0) >> 4
+                opcode: (status_byte & 0xf0) >> 4,
             };
-        } else {
-            self.running_status;
         }
 
         let status = self.running_status;
@@ -148,30 +156,32 @@ impl<I: MidiRead> Iterator for MidiReader<I> {
                 let note = Note::new(first_byte);
                 let velocity = self.read_byte();
 
-                let typ = 
-                    if status.opcode == 0x8 || (
-                        status.opcode == 0x9 && velocity == 0) {
-                            Release
-                    }
-                    else if status.opcode == 0x9 {
-                        Press
-                    }
-                    else { Aftertouch };
+                let typ = if status.opcode == 0x8 || (status.opcode == 0x9 && velocity == 0) {
+                    Release
+                } else if status.opcode == 0x9 {
+                    Press
+                } else {
+                    Aftertouch
+                };
 
-                Key {typ: typ, note: note, velocity: velocity}
-            },
+                Key {
+                    typ,
+                    note,
+                    velocity,
+                }
+            }
             0xb => ControlChange {
                 controller: first_byte,
-                value: self.read_byte()
+                value: self.read_byte(),
             },
             0xc => PatchChange {
-                program: first_byte
+                program: first_byte,
             },
             0xd => ChannelAftertouch {
-                channel: first_byte
+                channel: first_byte,
             },
             0xe => PitchWheelChange {
-                value: ((first_byte as u16) << 7) | self.read_byte() as u16
+                value: ((first_byte as u16) << 7) | self.read_byte() as u16,
             },
             0xf => {
                 if status.channel == 0xf {
@@ -187,17 +197,18 @@ impl<I: MidiRead> Iterator for MidiReader<I> {
                     let length = self.reader.read_var_len().unwrap() as usize;
                     let data = self.read_bytes(length);
 
-                    Meta { typ: typ, data: data }
-                }
-                else {
+                    Meta { typ, data }
+                } else {
                     panic!("Nope")
                 }
-            },
-            _ => unreachable!("Invalid opcode")
+            }
+            _ => unreachable!("Invalid opcode"),
         };
 
         let event = Event {
-            delay: ticks, channel: status.channel, typ: event_type
+            delay: ticks,
+            channel: status.channel,
+            typ: event_type,
         };
 
         Some(event)

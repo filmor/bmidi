@@ -1,8 +1,8 @@
 extern crate pitch_calc;
 
 use pitch_calc::{Hz, Step};
+use std::convert::From;
 use std::fmt;
-use std::convert::{From};
 
 #[derive(Copy, Clone)]
 pub struct Note(u8);
@@ -12,8 +12,8 @@ impl Note {
         Note(value)
     }
 
-    pub fn to_step(&self) -> Step {
-        Step(self.0 as f32)
+    pub fn to_step(self) -> Step {
+        Step(self.0.into())
     }
 }
 

@@ -1,12 +1,12 @@
 extern crate pitch_calc;
 
-mod types;
-mod parser;
-mod errors;
-mod reader;
-mod note;
 mod combined_iterator;
+mod errors;
+mod note;
+mod parser;
+mod reader;
+mod types;
 
+pub use note::*;
 pub use parser::File;
 pub use types::*;
-pub use note::*;
