@@ -1,4 +1,4 @@
-use note::Note;
+use crate::note::Note;
 
 pub type Ticks = u32;
 pub type Byte = u8;

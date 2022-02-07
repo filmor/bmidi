@@ -3,6 +3,8 @@ name = "bmidi"
 version = "0.0.2"
 authors = ["Benedikt Reinartz <filmor@gmail.com>"]
 
+edition = "2021"
+
 license = "LGPL-3.0"
 
 description = "Midi parsing and processing library"

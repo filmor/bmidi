@@ -2,9 +2,9 @@ use std::fs::File as FsFile;
 use std::io::{BufReader, Read};
 use std::path::Path;
 
-use combined_iterator::CombinedIterator;
-use reader::MidiReader;
-use types::{Event, Ticks};
+use crate::combined_iterator::CombinedIterator;
+use crate::reader::MidiReader;
+use crate::types::{Event, Ticks};
 
 pub type Track = Vec<u8>;
 
@@ -15,7 +15,7 @@ pub struct File {
 }
 
 impl File {
-    pub fn track_iter<'a>(&'a self, index: usize) -> Box<Iterator<Item = Event> + 'a> {
+    pub fn track_iter<'a>(&'a self, index: usize) -> Box<dyn Iterator<Item = Event> + 'a> {
         let track = &self.tracks[index];
         let iter = track.into_iter().cloned();
         let my_reader = MidiReader::new(iter);

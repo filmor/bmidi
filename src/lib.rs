@@ -7,6 +7,6 @@ mod parser;
 mod reader;
 mod types;
 
-pub use note::*;
-pub use parser::File;
-pub use types::*;
+pub use crate::note::*;
+pub use crate::parser::File;
+pub use crate::types::*;

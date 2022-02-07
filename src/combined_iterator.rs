@@ -1,9 +1,9 @@
+use crate::types::Event;
 use std::collections::BinaryHeap;
-use types::Event;
 
 struct IterState<'a> {
     next_event: Event,
-    iter: Box<Iterator<Item = Event> + 'a>,
+    iter: Box<dyn Iterator<Item = Event> + 'a>,
 }
 
 #[derive(Eq, PartialEq, PartialOrd, Ord, Clone, Copy)]
@@ -23,7 +23,7 @@ pub struct TrackEvent {
 }
 
 impl<'a> CombinedIterator<'a> {
-    pub fn new(iters: Vec<Box<Iterator<Item = Event> + 'a>>) -> Self {
+    pub fn new(iters: Vec<Box<dyn Iterator<Item = Event> + 'a>>) -> Self {
         let mut states = Vec::with_capacity(iters.len());
         let mut heap = BinaryHeap::with_capacity(iters.len());
 

@@ -1,12 +1,12 @@
 #![cfg_attr(feature = "cargo-clippy", allow(cast_lossless))]
 
-use note::Note;
+use crate::note::Note;
 
-use types::EventType::*;
-use types::KeyEventType::*;
-use types::*;
+use crate::types::EventType::*;
+use crate::types::KeyEventType::*;
+use crate::types::*;
 
-use errors::*;
+use crate::errors::*;
 
 #[derive(Clone, Copy)]
 struct Status {
@@ -19,19 +19,19 @@ pub trait MidiRead {
 
     fn read_byte(&mut self) -> Result<u8, MidiError> {
         let mut res = [0u8];
-        try!(self.read(&mut res));
+        self.read(&mut res)?;
         Ok(res[0])
     }
 
     fn read_short(&mut self) -> Result<u16, MidiError> {
         let mut res = [0 as u8; 2];
-        try!(self.read(&mut res));
+        self.read(&mut res)?;
         Ok(u16::from(res[0]) << 8 | u16::from(res[1]))
     }
 
     fn read_int(&mut self) -> Result<u32, MidiError> {
         let mut res = [0 as u8; 4];
-        try!(self.read(&mut res));
+        self.read(&mut res)?;
         Ok(
             (((res[0] as u32) << 8 | (res[1] as u32)) << 8 | (res[2] as u32)) << 8
                 | (res[3] as u32),
@@ -42,7 +42,7 @@ pub trait MidiRead {
         let mut res = 0 as u32;
 
         loop {
-            let next_byte = u32::from(try!(self.read_byte()));
+            let next_byte = u32::from(self.read_byte()?);
             res <<= 7;
             res |= next_byte & 0x7f;
             if next_byte & 0x80 == 0 {
