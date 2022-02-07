@@ -17,7 +17,7 @@ pub struct File {
 impl File {
     pub fn track_iter<'a>(&'a self, index: usize) -> Box<dyn Iterator<Item = Event> + 'a> {
         let track = &self.tracks[index];
-        let iter = track.into_iter().cloned();
+        let iter = track.iter().cloned();
         let my_reader = MidiReader::new(iter);
         Box::new(my_reader)
     }

@@ -1,5 +1,3 @@
-#![cfg_attr(feature = "cargo-clippy", allow(cast_lossless))]
-
 use crate::note::Note;
 
 use crate::types::EventType::*;
@@ -24,13 +22,13 @@ pub trait MidiRead {
     }
 
     fn read_short(&mut self) -> Result<u16, MidiError> {
-        let mut res = [0 as u8; 2];
+        let mut res = [0_u8; 2];
         self.read(&mut res)?;
         Ok(u16::from(res[0]) << 8 | u16::from(res[1]))
     }
 
     fn read_int(&mut self) -> Result<u32, MidiError> {
-        let mut res = [0 as u8; 4];
+        let mut res = [0_u8; 4];
         self.read(&mut res)?;
         Ok(
             (((res[0] as u32) << 8 | (res[1] as u32)) << 8 | (res[2] as u32)) << 8
@@ -39,7 +37,7 @@ pub trait MidiRead {
     }
 
     fn read_var_len(&mut self) -> Result<u32, MidiError> {
-        let mut res = 0 as u32;
+        let mut res = 0;
 
         loop {
             let next_byte = u32::from(self.read_byte()?);
