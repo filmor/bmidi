@@ -150,7 +150,7 @@ impl<I: MidiRead> Iterator for MidiReader<I> {
         let status = self.running_status;
 
         let event_type = match status.opcode {
-            0x8 | 0x9 | 0xa => {
+            0x8..=0xa => {
                 let note = Note::new(first_byte);
                 let velocity = self.read_byte();
 

@@ -44,7 +44,7 @@ impl<'a> CombinedIterator<'a> {
     }
 }
 
-impl<'a> Iterator for CombinedIterator<'a> {
+impl Iterator for CombinedIterator<'_> {
     type Item = TrackEvent;
 
     fn next(&mut self) -> Option<TrackEvent> {
