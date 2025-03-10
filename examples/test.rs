@@ -3,7 +3,7 @@ extern crate bmidi;
 use bmidi::*;
 
 fn main() {
-    let res = File::parse("test.mid".as_ref());
+    let res = File::parse("test.mid".as_ref()).unwrap();
 
     for t in 0..res.tracks.len() {
         println!("\nTrack:\n=========");

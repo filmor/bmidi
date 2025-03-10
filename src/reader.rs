@@ -1,3 +1,5 @@
+use std::io::Read;
+
 use crate::note::Note;
 
 use crate::types::EventType::*;
@@ -6,37 +8,74 @@ use crate::types::*;
 
 use crate::errors::*;
 
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 struct Status {
     channel: Byte,
     opcode: Byte,
 }
 
-pub trait MidiRead {
-    fn read(&mut self, output: &mut [u8]) -> Result<(), MidiError>;
+pub struct MidiRead<R>
+where
+    R: Read,
+{
+    reader: R,
+    running_status: Status,
+}
 
-    fn read_byte(&mut self) -> Result<u8, MidiError> {
-        let mut res = [0u8];
+impl<R> MidiRead<R>
+where
+    R: Read,
+{
+    pub fn new(reader: R) -> Self {
+        Self {
+            reader,
+            running_status: Status::default(),
+        }
+    }
+
+    fn read(&mut self, output: &mut [u8]) -> Result<(), MidiError> {
+        match self.reader.read(output).ok() {
+            Some(len) if len == output.len() => Ok(()),
+            _ => Err(MidiError::EndOfStream),
+        }
+    }
+
+    pub fn read_bytes_dyn(&mut self, length: usize) -> Result<Vec<u8>, MidiError> {
+        let mut res = vec![0u8; length];
         self.read(&mut res)?;
+        Ok(res)
+    }
+
+    pub fn read_bytes<const N: usize>(&mut self) -> Result<[u8; N], MidiError> {
+        let mut res = [0u8; N];
+        self.read(&mut res)?;
+        Ok(res)
+    }
+
+    pub fn read_string(&mut self, length: usize) -> Result<String, MidiError> {
+        let res = self.read_bytes_dyn(length)?;
+        String::from_utf8(res).or_else(|_| Err(MidiError::InvalidUtf8String))
+    }
+
+    pub fn read_byte(&mut self) -> Result<u8, MidiError> {
+        let res = self.read_bytes::<1>()?;
         Ok(res[0])
     }
 
-    fn read_short(&mut self) -> Result<u16, MidiError> {
-        let mut res = [0_u8; 2];
-        self.read(&mut res)?;
+    pub fn read_short(&mut self) -> Result<u16, MidiError> {
+        let res = self.read_bytes::<2>()?;
         Ok(u16::from(res[0]) << 8 | u16::from(res[1]))
     }
 
-    fn read_int(&mut self) -> Result<u32, MidiError> {
-        let mut res = [0_u8; 4];
-        self.read(&mut res)?;
+    pub fn read_int(&mut self) -> Result<u32, MidiError> {
+        let res = self.read_bytes::<4>()?;
         Ok(
             (((res[0] as u32) << 8 | (res[1] as u32)) << 8 | (res[2] as u32)) << 8
                 | (res[3] as u32),
         )
     }
 
-    fn read_var_len(&mut self) -> Result<u32, MidiError> {
+    pub fn read_var_len(&mut self) -> Result<u32, MidiError> {
         let mut res = 0;
 
         loop {
@@ -52,95 +91,19 @@ pub trait MidiRead {
     }
 }
 
-impl<T> MidiRead for T
-where
-    T: Iterator<Item = u8>,
-{
-    fn read(&mut self, output: &mut [u8]) -> Result<(), MidiError> {
-        for field in output.iter_mut() {
-            match self.next() {
-                Some(value) => *field = value,
-                None => return Err(MidiError::EndOfStream),
-            }
-        }
-
-        Ok(())
-    }
-
-    fn read_byte(&mut self) -> Result<u8, MidiError> {
-        match self.next() {
-            Some(value) => Ok(value),
-            None => Err(MidiError::EndOfStream),
-        }
-    }
-}
-
-/* Disabled until inverse trait bounds are supported
- * Needs: use std::io::Read;
-
-impl<T: Read + !Iterator<Item=u8>> MidiRead for T {
-    fn read(&mut self, output: &mut [u8]) -> Result<(), MidiError> {
-        match Read::read(self, output).ok() {
-            Some(len) if len == output.len() => Ok(()),
-            _ => Err(MidiError::EndOfStream)
-        }
-    }
-}
-
-*/
-
-pub struct MidiReader<I: MidiRead> {
-    reader: I,
-    running_status: Status,
-}
-
-impl<I: MidiRead> MidiReader<I> {
-    pub fn new(reader: I) -> MidiReader<I> {
-        MidiReader {
-            reader,
-            running_status: Status {
-                channel: 0,
-                opcode: 0,
-            },
-        }
-    }
-
-    fn read_byte(&mut self) -> u8 {
-        self.reader.read_byte().unwrap()
-    }
-
-    pub fn read_int(&mut self) -> u32 {
-        self.reader.read_int().unwrap()
-    }
-
-    pub fn read_short(&mut self) -> u16 {
-        self.reader.read_short().unwrap()
-    }
-
-    pub fn read_bytes(&mut self, length: usize) -> Vec<u8> {
-        let mut res = vec![0u8; length];
-        self.reader.read(&mut res).unwrap();
-        res
-    }
-
-    pub fn read_string(&mut self, length: usize) -> String {
-        String::from_utf8(self.read_bytes(length)).unwrap()
-    }
-}
-
-impl<I: MidiRead> Iterator for MidiReader<I> {
+impl<R: Read> Iterator for MidiRead<R> {
     // type Item = Result<Event, MidiError>;
     type Item = Event;
 
     fn next(&mut self) -> Option<Event> /* Option<Result<Event, MidiError>>*/ {
         // TODO: Break cleanly if self.reader is exhausted
-        let ticks = self.reader.read_var_len().unwrap();
+        let ticks = self.read_var_len().ok()?;
 
-        let mut first_byte = self.read_byte();
+        let mut first_byte = self.read_byte().ok()?;
 
         if (first_byte & 1 << 7) != 0 {
             let status_byte = first_byte;
-            first_byte = self.read_byte();
+            first_byte = self.read_byte().ok()?;
             self.running_status = Status {
                 channel: status_byte & 0xf,
                 opcode: (status_byte & 0xf0) >> 4,
@@ -152,7 +115,7 @@ impl<I: MidiRead> Iterator for MidiReader<I> {
         let event_type = match status.opcode {
             0x8..=0xa => {
                 let note = Note::new(first_byte);
-                let velocity = self.read_byte();
+                let velocity = self.read_byte().ok()?;
 
                 let typ = if status.opcode == 0x8 || (status.opcode == 0x9 && velocity == 0) {
                     Release
@@ -170,7 +133,7 @@ impl<I: MidiRead> Iterator for MidiReader<I> {
             }
             0xb => ControlChange {
                 controller: first_byte,
-                value: self.read_byte(),
+                value: self.read_byte().ok()?,
             },
             0xc => PatchChange {
                 program: first_byte,
@@ -179,7 +142,7 @@ impl<I: MidiRead> Iterator for MidiReader<I> {
                 channel: first_byte,
             },
             0xe => PitchWheelChange {
-                value: ((first_byte as u16) << 7) | self.read_byte() as u16,
+                value: ((first_byte as u16) << 7) | self.read_byte().ok()? as u16,
             },
             0xf => {
                 if status.channel == 0xf {
@@ -187,13 +150,13 @@ impl<I: MidiRead> Iterator for MidiReader<I> {
 
                     if typ == 0x2f {
                         // End-of-track
-                        let null_byte = self.read_byte();
+                        let null_byte = self.read_byte().ok()?;
                         assert!(null_byte == 0u8);
                         return None;
                     }
 
-                    let length = self.reader.read_var_len().unwrap() as usize;
-                    let data = self.read_bytes(length);
+                    let length = self.read_var_len().ok()? as usize;
+                    let data = self.read_bytes_dyn(length).ok()?;
 
                     Meta { typ, data }
                 } else {
